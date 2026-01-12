@@ -1,17 +1,33 @@
-import dotenv from "dotenv"
-import mongoose from "mongoose"
+import mongoose from "mongoose";
 
+const MONGO_URI = process.env.MONGO_URI;
 
-dotenv.config();
-
-const connectDB = async (): Promise<void> => {
-    try {
-        await mongoose.connect(process.env.MONGO_URI as string);
-
-    } catch (error) {
-        console.log("mongoDB connection error: ", error);
-        throw error;
-    }
+if (!MONGO_URI) {
+  throw new Error("MONGO_URI is not defined");
 }
 
-export default connectDB
+// Global cache (serverless safe)
+let cached = (global as any).mongoose;
+
+if (!cached) {
+  cached = (global as any).mongoose = {
+    conn: null,
+    promise: null,
+  };
+}
+
+const connectDB = async (): Promise<void> => {
+  if (cached.conn) {
+    return;
+  }
+
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(MONGO_URI).then((mongoose) => {
+      return mongoose;
+    });
+  }
+
+  cached.conn = await cached.promise;
+};
+
+export default connectDB;
