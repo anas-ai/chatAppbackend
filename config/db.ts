@@ -1,33 +1,12 @@
 import mongoose from "mongoose";
 
-const MONGO_URI = process.env.MONGO_URI;
+let isConnected = false;
 
-if (!MONGO_URI) {
-  throw new Error("MONGO_URI is not defined");
-}
+const connectDB = async () => {
+  if (isConnected) return;
 
-// Global cache (serverless safe)
-let cached = (global as any).mongoose;
-
-if (!cached) {
-  cached = (global as any).mongoose = {
-    conn: null,
-    promise: null,
-  };
-}
-
-const connectDB = async (): Promise<void> => {
-  if (cached.conn) {
-    return;
-  }
-
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGO_URI).then((mongoose) => {
-      return mongoose;
-    });
-  }
-
-  cached.conn = await cached.promise;
+  await mongoose.connect(process.env.MONGO_URI as string);
+  isConnected = true;
 };
 
 export default connectDB;
